@@ -16,19 +16,31 @@ class CategoryResult:
 
 def xmin_by_weight(w: float) -> float:
     """
-    Regla automática para fijar x_min según el peso w (en proporción).
-    Ejemplo: 7,5% => w=0.075
+    Asignación exacta de x_min según los pesos definidos en vuestro modelo.
+    w está en proporción (7,5% = 0.075)
     """
-    if w <= 0:
-        return 0.0
-    if w >= 0.045:
-        return 0.0
-    if w >= 0.02:
-        return 0.2
-    if w >= 0.01:
-        return 0.3
-    return 0.4
+    peso_pct = round(w * 100, 1)
 
+    if peso_pct <= 0:
+        return 0.0
+
+    mapping = {
+        7.5: 0.00,
+        5.5: 0.05,
+        5.0: 0.10,
+        4.5: 0.15,
+        4.0: 0.20,
+        3.0: 0.25,
+        2.5: 0.30,
+        2.0: 0.35,
+        1.5: 0.40,
+        1.0: 0.45,
+        0.5: 0.50,
+        0.0: 0.0,   # si entra, no aporta
+    }
+
+    # Si llega un peso no contemplado (por ejemplo 6,0), devolvemos una regla por defecto razonable
+    return mapping.get(peso_pct, 0.20)
 
 def generate_scale(peso_pct: float, k: int, xmin: Optional[float] = None) -> Dict:
     """
@@ -91,4 +103,5 @@ def generate_scale(peso_pct: float, k: int, xmin: Optional[float] = None) -> Dic
         "delta_max": round(delta_max, 6),
         "delta_max_pct": round(delta_max * 100.0, 4),
         "categories": results,
+
     }
