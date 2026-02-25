@@ -1,3 +1,26 @@
+import pandas as pd
+import streamlit as st
+from scoring import generate_scale, xmin_by_weight
+
+st.set_page_config(page_title="Scoring Calculator", layout="centered")
+
+st.title("Calculadora de subcategorías (scoring 0–1)")
+st.caption("Genera valores normalizados, aportación por categoría y saltos entre categorías.")
+
+col1, col2 = st.columns(2)
+with col1:
+    peso_pct = st.number_input("Peso de la variable (%)", min_value=0.0, max_value=100.0, value=7.5, step=0.5)
+with col2:
+    k = st.number_input("Número de categorías (k)", min_value=2, max_value=20, value=4, step=1)
+
+w = peso_pct / 100.0
+xmin_auto = xmin_by_weight(w)
+
+st.markdown("### Rango (premio/castigo)")
+use_custom = st.toggle("Definir x_min manualmente", value=False)
+
+if use_custom:
+    xmin = st.slider("x_min", min_value=0.0, max_value=1.0, value=float(min(xmin_auto, 1.0)), step=0.05)
 else:
     xmin = None
     st.info(f"x_min automático recomendado: **{xmin_auto}** (según peso)")
