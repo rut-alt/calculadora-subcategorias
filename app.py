@@ -43,10 +43,10 @@ df = pd.DataFrame([{
     "Incremento vs anterior (%)": c.delta_from_prev_pct,
 } for c in cats])
 
-st.markdown("### 📊 Resultados")
+st.markdown("###  Resultados")
 st.dataframe(df, use_container_width=True)
 
-st.markdown("### 🧠 Impacto máximo de la variable")
+st.markdown("###  Impacto máximo de la variable")
 st.metric("Impacto máximo posible en el Score (%)", res["delta_max_pct"])
 
 st.markdown("---")
@@ -93,3 +93,4 @@ Indica el impacto máximo que puede tener la variable dentro del modelo.
 Cuanto mayor sea este valor, mayor capacidad tiene la variable para
 premiar o castigar dentro del modelo.
 """)
+
