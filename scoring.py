@@ -42,7 +42,13 @@ def xmin_by_weight(w: float) -> float:
     # Si llega un peso no contemplado (por ejemplo 6,0), devolvemos una regla por defecto razonable
     return mapping.get(peso_pct, 0.20)
 
-def generate_scale(peso_pct: float, k: int, xmin: Optional[float] = None) -> Dict:
+
+def generate_scale(
+    peso_pct: float,
+    k: int,
+    xmin: Optional[float] = None,
+    xmin_floor: float = 0.01,  # 👈 suelo mínimo para que la peor categoría sume algo
+) -> Dict:
     """
     Genera escala lógica de k categorías para una variable con peso 'peso_pct' (%).
 
@@ -50,7 +56,7 @@ def generate_scale(peso_pct: float, k: int, xmin: Optional[float] = None) -> Dic
     - x(j) equiespaciado en [xmin, 1]
     - contribution(j) = w * x(j)
     - delta(j) = contribution(j) - contribution(j-1)
-    - x_min_effective / x_max_effective (para el resumen en Streamlit)
+    - x_min_effective / x_max_effective
     """
     if k < 2:
         raise ValueError("k debe ser >= 2 (mínimo 2 categorías).")
@@ -60,6 +66,8 @@ def generate_scale(peso_pct: float, k: int, xmin: Optional[float] = None) -> Dic
     if xmin is None:
         xmin = xmin_by_weight(w)
 
+    # 👇 aplica el suelo mínimo
+    xmin = max(float(xmin_floor), float(xmin))
     xmin = max(0.0, min(1.0, float(xmin)))
 
     results: List[CategoryResult] = []
@@ -86,22 +94,61 @@ def generate_scale(peso_pct: float, k: int, xmin: Optional[float] = None) -> Dic
         )
         prev_contrib = contrib
 
-    # Para el resumen en app.py
     x_min_effective = results[0].x if results else 0.0
     x_max_effective = results[-1].x if results else 0.0
-
-    # Impacto máximo de la variable (en el score total)
     delta_max = w * (x_max_effective - x_min_effective)
 
     return {
         "peso_pct": float(peso_pct),
-        "w": w,
+        "w": float(w),
         "k": int(k),
-        "xmin": xmin,
-        "x_min_effective": x_min_effective,
-        "x_max_effective": x_max_effective,
-        "delta_max": round(delta_max, 6),
-        "delta_max_pct": round(delta_max * 100.0, 4),
+        "xmin": float(xmin),
+        "x_min_effective": float(x_min_effective),
+        "x_max_effective": float(x_max_effective),
+        "delta_max": round(float(delta_max), 6),
+        "delta_max_pct": round(float(delta_max) * 100.0, 4),
         "categories": results,
-
     }
+
+
+def x_value_for_choice(
+    peso_pct: float,
+    k: int,
+    choice_index: int,
+    invert: bool = False,
+    xmin_floor: float = 0.01,
+    xmin: Optional[float] = None,
+) -> float:
+    """
+    Devuelve x(j) para una elección 0..k-1 (según el orden de labels que mostráis).
+    invert=True si "más es peor" (invierte el orden).
+    """
+    if not (0 <= choice_index < k):
+        raise ValueError(f"choice_index debe estar en [0, {k-1}]")
+
+    res = generate_scale(peso_pct=peso_pct, k=k, xmin=xmin, xmin_floor=xmin_floor)
+    xs = [c.x for c in res["categories"]]  # j=1..k (peor -> mejor)
+    if invert:
+        xs = list(reversed(xs))
+    return float(xs[choice_index])
+
+
+def contribution_pct_for_choice(
+    peso_pct: float,
+    k: int,
+    choice_index: int,
+    invert: bool = False,
+    xmin_floor: float = 0.01,
+    xmin: Optional[float] = None,
+) -> float:
+    """
+    Devuelve cuánto suma al score total (en %) para choice_index 0..k-1.
+    """
+    if not (0 <= choice_index < k):
+        raise ValueError(f"choice_index debe estar en [0, {k-1}]")
+
+    res = generate_scale(peso_pct=peso_pct, k=k, xmin=xmin, xmin_floor=xmin_floor)
+    contribs = [c.contribution_pct for c in res["categories"]]  # peor -> mejor
+    if invert:
+        contribs = list(reversed(contribs))
+    return float(contribs[choice_index])
